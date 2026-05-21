@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Просмотр презентаций - Загрузка и просмотр</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Главный контейнер */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Заголовок */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Область загрузки */
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-section.drag-over {
+            background: #f0f0ff;
+            border: 2px dashed #667eea;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+
+        /* Режим просмотра презентации */
+        .presentation-mode {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+        }
+
+        .presentation-mode.active {
+            display: block;
+        }
+
+        .presentation-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Элементы управления презентацией */
+        .presentation-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            display: flex;
+            gap: 15px;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .presentation-controls button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .presentation-controls button:hover {
+            background: #667eea;
+            transform: scale(1.1);
+        }
+
+        .slide-counter {
+            background: rgba(255,255,255,0.2);
+            padding: 0 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .exit-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 1001;
+            transition: all 0.3s;
+        }
+
+        .exit-btn:hover {
+            background: #ff4757;
+            transform: scale(1.05);
+        }
+
+        /* Слайды */
+        .slides-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .slide.active {
+            opacity: 1;
+            z-index: 1;
+        }
+
+        .slide-content {
+            max-width: 1200px;
+            width: 100%;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .slide h1 {
+            font-size: 4em;
+            margin-bottom: 30px;
+            animation: fadeInUp 0.5s;
+        }
+
+        .slide p {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            animation: fadeInUp 0.5s 0.2s both;
+        }
+
+        .slide ul {
+            text-align: left;
+            display: inline-block;
+            animation: fadeInUp 0.5s 0.3s both;
+        }
+
+        .slide li {
+            margin: 15px 0;
+            font-size: 1.3em;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Прогресс бар */
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            z-index: 1001;
+        }
+
+        /* PDF просмотрщик */
+        .pdf-viewer {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Список презентаций */
+        .presentations-list {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .presentations-list h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .list-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .list-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .list-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        /* Уведомления */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 2000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success { background: #28a745; }
+        .alert-error { background: #dc3545; }
+        .alert-info { background: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>📊 Просмотр презентаций</h1>
+            <p>Загрузите презентацию и она сразу откроется в режиме просмотра</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📁</div>
+            <h3>Нажмите или перетащите презентацию сюда</h3>
+            <p>Поддерживаемые форматы: PPT, PPTX, PDF, а также текстовые презентации</p>
+            <input type="file" id="fileInput" class="file-input" accept=".ppt,.pptx,.pdf,.txt,.md">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📤 Выбрать презентацию
+            </button>
+        </div>
+
+        <div class="presentations-list" id="presentationsList">
+            <h3>📋 Мои презентации</h3>
+            <div class="list-items" id="listItems">
+                <p style="color: #999; text-align: center;">Нет загруженных презентаций</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Режим просмотра презентации -->
+    <div class="presentation-mode" id="presentationMode">
+        <div class="presentation-container" id="presentationContainer">
+            <!-- Сюда будет загружаться презентация -->
+        </div>
+        <div class="presentation-controls" id="presentationControls">
+            <button id="prevSlideBtn" title="Предыдущий слайд">◀</button>
+            <div class="slide-counter" id="slideCounter">1 / 1</div>
+            <button id="nextSlideBtn" title="Следующий слайд">▶</button>
+            <button id="fullscreenBtn" title="Полный экран">⛶</button>
+        </div>
+        <button class="exit-btn" id="exitBtn" title="Выйти из просмотра">✕</button>
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <script>
+        let presentations = [];
+        let currentPresentation = null;
+        let currentSlide = 0;
+        let totalSlides = 0;
+
+        // Загрузка презентаций из localStorage
+        function loadPresentations() {
+            const saved = localStorage.getItem('presentations');
+            if (saved) {
+                presentations = JSON.parse(saved);
+                displayPresentationsList();
+            }
+        }
+
+        // Сохранение презентаций
+        function savePresentations() {
+            localStorage.setItem('presentations', JSON.stringify(presentations));
+            displayPresentationsList();
+        }
+
+        // Отображение списка презентаций
+        function displayPresentationsList() {
+            const container = document.getElementById('listItems');
+            if (presentations.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">Нет загруженных презентаций</p>';
+                return;
+            }
+
+            container.innerHTML = presentations.map((pres, index) => `
+                <div class="list-item" onclick="openPresentation(${index})">
+                    <span>${getIcon(pres.type)}</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold;">${pres.name}</div>
+                        <div style="font-size: 0.75em; color: #666;">${formatDate(pres.date)} • ${pres.slides.length} слайдов</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Получение иконки
+        function getIcon(type) {
+            return type === 'pdf' ? '📄' : '📊';
+        }
+
+        // Форматирование даты
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('ru-RU');
+        }
+
+        // Загрузка файла
+        function uploadFile(file) {
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            
+            if (file.size > 50 * 1024 * 1024) {
+                showAlert('Файл слишком большой. Максимальный размер - 50MB', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let presentationData;
+                
+                if (ext === 'pdf') {
+                    // Для PDF файлов
+                    presentationData = {
+                        id: Date.now(),
+                        name: file.name,
+                        type: 'pdf',
+                        data: e.target.result,
+                        date: new Date().toISOString(),
+                        slides: []
+                    };
+                } else {
+                    // Для текстовых презентаций - парсим содержимое
+                    const content = e.target.result;
+                    const slides = parseTextToSlides(content);
+                    presentationData = {
+                        id: Date.now(),
+                        name: file.name,
+                        type: 'text',
+                        data: content,
+                        date: new Date().toISOString(),
+                        slides: slides
+                    };
+                }
+                
+                presentations.unshift(presentationData);
+                savePresentations();
+                showAlert(`Презентация "${file.name}" загружена!`, 'success');
+                
+                // Автоматически открываем презентацию
+                openPresentation(0);
+            };
+            
+            if (ext === 'pdf') {
+                reader.readAsDataURL(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        // Парсинг текста в слайды
+        function parseTextToSlides(text) {
+            // Разделяем текст по строкам с --- или по двум переносам строки
+            let slidesText = text.split(/\n---\n|\n\r---\n\r/);
+            
+            if (slidesText.length === 1) {
+                slidesText = text.split(/\n\n\n+/);
+            }
+            
+            return slidesText.map((slideText, index) => {
+                const lines = slideText.trim().split('\n');
+                const title = lines[0] || `Слайд ${index + 1}`;
+                const content = lines.slice(1).join('\n');
+                
+                return {
+                    title: title,
+                    content: content || 'Нет содержимого',
+                    background: getGradientColor(index)
+                };
+            });
+        }
+
+        // Генерация цветов для слайдов
+        function getGradientColor(index) {
+            const colors = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
+            ];
+            return colors[index % colors.length];
+        }
+
+        // Открытие презентации
+        function openPresentation(index) {
+            currentPresentation = presentations[index];
+            
+            if (!currentPresentation) return;
+            
+            if (currentPresentation.type === 'pdf') {
+                openPDFPresentation();
+            } else {
+                openSlidePresentation();
+            }
+            
+            // Показываем режим презентации
+            document.getElementById('presentationMode').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Открытие PDF презентации
+        function openPDFPresentation() {
+            const container = document.getElementById('presentationContainer');
+            container.innerHTML = `<iframe class="pdf-viewer" src="${currentPresentation.data}"></iframe>`;
+            
+            // Скрываем элементы управления слайдами
+            document.getElementById('prevSlideBtn').style.display = 'none';
+            document.getElementById('nextSlideBtn').style.display = 'none';
+            document.getElementById('slideCounter').style.display = 'none';
+            document.getElementById('progressBar').style.display = 'none';
+        }
+
+        // Открытие слайд-шоу
+        function openSlidePresentation() {
+            currentSlide = 0;
+            totalSlides = currentPresentation.slides.length;
+            
+            const container = document.getElementById('presentationContainer');
+            const slidesHTML = `
+                <div class="slides-container" id="slidesContainer">
+                    ${currentPresentation.slides.map((slide, idx) => `
+                        <div class="slide" data-index="${idx}" style="background: ${slide.background}">
+                            <div class="slide-content">
+                                <h1>${escapeHtml(slide.title)}</h1>
+                                <div style="white-space: pre-line; font-size: 1.3em;">${escapeHtml(slide.content)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = slidesHTML;
+            
+            // Активируем первый слайд
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length > 0) {
+                slides[currentSlide].classList.add('active');
+            }
+            
+            // Показываем элементы управления
+        document.addEventListener('keydown', (event) => {
+  if (event.key === 'A') { // Например, нажатие клавиши 'A'
+    event.preventDefault(); // Предотвращаем стандартное поведение клавиши
+    // Здесь можно добавить код для выполнения действия при нажатии клавиши
+  }
+});
+
+            document.getElementById('prevSlideBtn').style.display = 'flex';
+            document.getElementById('nextSlideBtn').style.display = 'flex';
+            document.getElementById('slideCounter').style.display = 'flex';
+            document.getElementById('progressBar').style.display = 'block';
+            
+            updateSlideCounter();
+            updateProgress();
+            
+            // Настройка обработчиков
+            setupSlideControls();
+        }
+
+        // Настройка управления слайдами
+        function setupSlideControls() {
+            const prevBtn = document.getElementById('prevSlideBtn');
+            const nextBtn = document.getElementById('nextSlideBtn');
+            
+            // Убираем старые обработчики
+            const newPrevBtn = prevBtn.cloneNode(true);
+            const newNextBtn = nextBtn.cloneNode(true);
+            prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+            
+            newPrevBtn.onclick = () => changeSlide(-1);
+            newNextBtn.onclick = () => changeSlide(1);
+            document.addEventListener('keydown', (event) => {
+            if (event.key === 'left') { // Например, нажатие клавиши 'A'
+                event.preventDefault(); // Предотвращаем стандартное поведение клавиши
+                newPrevBtn.onclick = () => changeSlide(-1);
+            }
+            });
+            document.addEventListener('keydown', (event) => {
+            if (event.key === 'right') { // Например, нажатие клавиши 'A'
+                event.preventDefault(); // Предотвращаем стандартное поведение клавиши
+                newPrevBtn.onclick = () => changeSlide(1);
+            }
+            });
+            }
+
+        // Обработка клавиш
+        function handleKeyPress(e) {
+            if (!document.getElementById('presentationMode').classList.contains('active')) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    changeSlide(-1);
+                    break;
+                case 'ArrowRight':
+                case ' ':
+                case 'Space':
+                    e.preventDefault();
+                    changeSlide(1);
+                    break;
+                case 'Escape':
+                    exitPresentation();
+                    break;
+            }
+        }
+
+        // Смена слайда
+        function changeSlide(direction) {
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length === 0) return;
+            
+            const newSlide = currentSlide + direction;
+            if (newSlide >= 0 && newSlide < totalSlides) {
+                slides[currentSlide].classList.remove('active');
+                currentSlide = newSlide;
+                slides[currentSlide].classList.add('active');
+                updateSlideCounter();
+                updateProgress();
+            }
+        }
+
+        // Обновление счетчика
+        function updateSlideCounter() {
+            const counter = document.getElementById('slideCounter');
+            counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
+
+        // Обновление прогресс-бара
+        function updateProgress() {
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${progress}%`;
+        }
+
+        // Выход из презентации
+        function exitPresentation() {
+            document.getElementById('presentationMode').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            document.removeEventListener('keydown', handleKeyPress);
+        }
+
+        // Полноэкранный режим
+        function toggleFullscreen() {
+            const presentationMode = document.getElementById('presentationMode');
+            if (!document.fullscreenElement) {
+                presentationMode.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Утилиты
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Drag & drop
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-over');
+        });
+        
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('drag-over');
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+        
+        // Кнопка выхода
+        document.getElementById('exitBtn').onclick = exitPresentation;
+        
+        // Полноэкранный режим
+        document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+        
+        // Загрузка презентаций при старте
+        loadPresentations();
+        
+        // Пример презентации для демонстрации
+        function addDemoPresentation() {
+            if (presentations.length === 0) {
+                const demoTemplate = `Добро пожаловать!
+---
+Эта демо-презентация показывает возможности просмотрщика
+---
+Управление:
+• Стрелки ← → для навигации
+• Пробел - следующий слайд
+• Esc - выход
+---
+Загрузите свою презентацию в формате:
+• Текстовый файл (разделяйте слайды через ---)
+• PDF файл
+---
+Спасибо за внимание!`;
+                
+                const slides = parseTextToSlides(demoTemplate);
+                presentations.push({
+                    id: Date.now(),
+                    name: 'Демо-презентация.txt',
+                    type: 'text',
+                    data: demoTemplate,
+                    date: new Date().toISOString(),
+                    slides: slides
+                });
+                savePresentations();
+            }
+        }
+        
+        addDemoPresentation();
+    </script>
+</body>
+</html>
